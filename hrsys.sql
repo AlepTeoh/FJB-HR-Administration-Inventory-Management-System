@@ -3,9 +3,9 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Mar 16, 2026 at 09:18 AM
+-- Generation Time: Mar 31, 2026 at 05:14 AM
 -- Server version: 10.4.32-MariaDB
--- PHP Version: 8.0.30
+-- PHP Version: 8.2.12
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -20,6 +20,27 @@ SET time_zone = "+00:00";
 --
 -- Database: `hrsys`
 --
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `business_travel`
+--
+
+CREATE TABLE `business_travel` (
+  `id` int(11) NOT NULL,
+  `staff_id` int(11) NOT NULL,
+  `destination` varchar(200) NOT NULL,
+  `purpose` varchar(300) DEFAULT NULL,
+  `departure_date` date NOT NULL,
+  `return_date` date NOT NULL,
+  `duration_days` int(11) GENERATED ALWAYS AS (to_days(`return_date`) - to_days(`departure_date`) + 1) STORED,
+  `transport` varchar(50) DEFAULT NULL,
+  `notes` text DEFAULT NULL,
+  `created_by` int(11) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
 
@@ -112,17 +133,33 @@ CREATE TABLE `meeting_rooms` (
   `name` varchar(100) NOT NULL,
   `description` varchar(200) DEFAULT NULL,
   `capacity` int(11) NOT NULL,
-  `color_class` varchar(50) DEFAULT NULL
+  `color_class` varchar(50) DEFAULT NULL,
+  `pic_user_id` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `meeting_rooms`
 --
 
-INSERT INTO `meeting_rooms` (`id`, `name`, `description`, `capacity`, `color_class`) VALUES
-(1, 'Boardroom', 'Main boardroom with projector and video conferencing', 10, 'room-blue'),
-(2, 'Discussion Room', 'Mid-size room for team discussions', 6, 'room-green'),
-(3, 'Huddle Room', 'Small room for quick meetings', 4, 'room-orange');
+INSERT INTO `meeting_rooms` (`id`, `name`, `description`, `capacity`, `color_class`, `pic_user_id`) VALUES
+(1, 'Boardroom', 'Main boardroom with projector and video conferencing', 10, 'room-blue', 3),
+(2, 'Discussion Room', 'Mid-size room for team discussions', 6, 'room-green', NULL),
+(3, 'Huddle Room', 'Small room for quick meetings', 4, 'room-orange', NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `password_resets`
+--
+
+CREATE TABLE `password_resets` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `otp_code` varchar(6) NOT NULL,
+  `expires_at` datetime NOT NULL,
+  `used` tinyint(1) DEFAULT 0,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
 
@@ -139,9 +176,24 @@ CREATE TABLE `room_bookings` (
   `start_time` time NOT NULL,
   `end_time` time NOT NULL,
   `purpose` text DEFAULT NULL,
+  `status` enum('pending','approved','rejected') NOT NULL DEFAULT 'pending',
+  `approved_by` int(11) DEFAULT NULL,
+  `approved_at` timestamp NULL DEFAULT NULL,
+  `approval_note` text DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `approved_by_id` int(11) DEFAULT NULL,
+  `approved_by_name` varchar(100) DEFAULT NULL,
+  `rejection_reason` varchar(255) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `room_bookings`
+--
+
+INSERT INTO `room_bookings` (`id`, `room_id`, `booked_by_id`, `booked_by_name`, `booking_date`, `start_time`, `end_time`, `purpose`, `status`, `approved_by`, `approved_at`, `approval_note`, `created_at`, `updated_at`, `approved_by_id`, `approved_by_name`, `rejection_reason`) VALUES
+(1, 3, 3, 'Hj Kamaradin Bin Selamat', '2026-03-30', '18:40:00', '19:10:00', 'te', 'approved', 2, '2026-03-30 08:39:00', NULL, '2026-03-30 08:38:41', '2026-03-30 08:39:00', NULL, NULL, NULL),
+(2, 1, 3, 'Hj Kamaradin Bin Selamat', '2026-03-31', '19:30:00', '20:30:00', '00', 'approved', 2, '2026-03-30 08:44:40', NULL, '2026-03-30 08:44:06', '2026-03-30 08:44:40', NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -692,6 +744,7 @@ CREATE TABLE `system_settings` (
 --
 
 INSERT INTO `system_settings` (`setting_key`, `setting_value`, `updated_by`, `updated_at`) VALUES
+('booking_pic_id', '2', 1, '2026-03-30 08:37:07'),
 ('module_family', '1', NULL, '2026-03-16 04:11:13'),
 ('module_requests', '1', NULL, '2026-03-16 04:11:13'),
 ('module_rooms', '1', NULL, '2026-03-16 04:11:13'),
@@ -2228,12 +2281,21 @@ CREATE TABLE `users` (
 
 INSERT INTO `users` (`id`, `staff_no`, `name`, `email`, `password`, `role`, `department_id`, `position`, `company`, `is_active`, `created_at`, `updated_at`) VALUES
 (1, '0000001', 'System Administrator', 'admin@company.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin_it', NULL, 'IT Administrator', 'FJB', 1, '2026-03-16 04:11:13', '2026-03-16 04:11:13'),
-(2, '0000002', 'HR Administrator', 'hr@company.com', '$2y$12$rntC8VaN/zuHRAnVF9FTB.vFVI6LF1Qhq.fg3diijaMfeDr8IvJ/6', 'admin_hr', 1, 'HR Manager', 'FJB', 1, '2026-03-16 04:11:13', '2026-03-16 04:11:13'),
-(3, '3600134', 'Hj Kamaradin Bin Selamat', 'staff@company.com', '$2y$12$xxHVShvVfjpjFcJwMDx/uOGj3BBDs1skU/05fzs32pFAmyIyJ.g6.', 'staff', 1, 'Chief Executive Officer', 'FJB', 1, '2026-03-16 04:11:13', '2026-03-16 04:11:13');
+(2, '3600733', 'HR Administrator', 'hr@company.com', '$2y$10$MH89kRmRiwOAz0eVVir3iOzxyF4Ga3RdktlcDvUqN/npzdOFRzhH.', 'admin_hr', 3, 'HR Manager', 'FJB', 1, '2026-03-16 04:11:13', '2026-03-30 06:13:23'),
+(3, '3600134', 'Hj Kamaradin Bin Selamat', 'staff@company.com', '$2y$12$xxHVShvVfjpjFcJwMDx/uOGj3BBDs1skU/05fzs32pFAmyIyJ.g6.', 'staff', 1, 'Chief Executive Officer', 'FJB', 1, '2026-03-16 04:11:13', '2026-03-16 04:11:13'),
+(4, '3600894', 'Azihanafi Bin Mohd Dakir', 'azihanafi@gmail.com', '$2y$10$54gnbAKJqRTFqFRodiGs4exXV.9ApUWFSGAhPezCpF861YgaO1ARe', 'staff', 16, 'Executive, IT', 'FJB', 1, '2026-03-31 00:48:00', '2026-03-31 00:48:00');
 
 --
 -- Indexes for dumped tables
 --
+
+--
+-- Indexes for table `business_travel`
+--
+ALTER TABLE `business_travel`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `business_travel_ibfk_1` (`staff_id`),
+  ADD KEY `business_travel_ibfk_2` (`created_by`);
 
 --
 -- Indexes for table `departments`
@@ -2252,7 +2314,15 @@ ALTER TABLE `family_members`
 -- Indexes for table `meeting_rooms`
 --
 ALTER TABLE `meeting_rooms`
-  ADD PRIMARY KEY (`id`);
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `fk_room_pic` (`pic_user_id`);
+
+--
+-- Indexes for table `password_resets`
+--
+ALTER TABLE `password_resets`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `user_id` (`user_id`);
 
 --
 -- Indexes for table `room_bookings`
@@ -2260,7 +2330,8 @@ ALTER TABLE `meeting_rooms`
 ALTER TABLE `room_bookings`
   ADD PRIMARY KEY (`id`),
   ADD KEY `room_id` (`room_id`),
-  ADD KEY `booked_by_id` (`booked_by_id`);
+  ADD KEY `booked_by_id` (`booked_by_id`),
+  ADD KEY `room_bookings_ibfk_approved` (`approved_by`);
 
 --
 -- Indexes for table `staff`
@@ -2312,6 +2383,12 @@ ALTER TABLE `users`
 --
 
 --
+-- AUTO_INCREMENT for table `business_travel`
+--
+ALTER TABLE `business_travel`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `departments`
 --
 ALTER TABLE `departments`
@@ -2330,10 +2407,16 @@ ALTER TABLE `meeting_rooms`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
+-- AUTO_INCREMENT for table `password_resets`
+--
+ALTER TABLE `password_resets`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `room_bookings`
 --
 ALTER TABLE `room_bookings`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT for table `staff`
@@ -2363,11 +2446,18 @@ ALTER TABLE `update_requests`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- Constraints for dumped tables
 --
+
+--
+-- Constraints for table `business_travel`
+--
+ALTER TABLE `business_travel`
+  ADD CONSTRAINT `business_travel_ibfk_1` FOREIGN KEY (`staff_id`) REFERENCES `staff` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `business_travel_ibfk_2` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL;
 
 --
 -- Constraints for table `family_members`
@@ -2376,11 +2466,24 @@ ALTER TABLE `family_members`
   ADD CONSTRAINT `family_members_ibfk_1` FOREIGN KEY (`staff_id`) REFERENCES `staff` (`id`) ON DELETE SET NULL;
 
 --
+-- Constraints for table `meeting_rooms`
+--
+ALTER TABLE `meeting_rooms`
+  ADD CONSTRAINT `fk_room_pic` FOREIGN KEY (`pic_user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL;
+
+--
+-- Constraints for table `password_resets`
+--
+ALTER TABLE `password_resets`
+  ADD CONSTRAINT `password_resets_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
 -- Constraints for table `room_bookings`
 --
 ALTER TABLE `room_bookings`
   ADD CONSTRAINT `room_bookings_ibfk_1` FOREIGN KEY (`room_id`) REFERENCES `meeting_rooms` (`id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `room_bookings_ibfk_2` FOREIGN KEY (`booked_by_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+  ADD CONSTRAINT `room_bookings_ibfk_2` FOREIGN KEY (`booked_by_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `room_bookings_ibfk_approved` FOREIGN KEY (`approved_by`) REFERENCES `users` (`id`) ON DELETE SET NULL;
 
 --
 -- Constraints for table `staff`
@@ -2406,55 +2509,8 @@ ALTER TABLE `update_requests`
 --
 ALTER TABLE `users`
   ADD CONSTRAINT `users_ibfk_1` FOREIGN KEY (`department_id`) REFERENCES `departments` (`id`) ON DELETE SET NULL;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `business_travel`
---
-
-CREATE TABLE `business_travel` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `staff_id` int(11) NOT NULL,
-  `destination` varchar(200) NOT NULL,
-  `purpose` varchar(300) DEFAULT NULL,
-  `departure_date` date NOT NULL,
-  `return_date` date NOT NULL,
-  `duration_days` int(11) GENERATED ALWAYS AS (DATEDIFF(`return_date`, `departure_date`) + 1) STORED,
-  `transport` varchar(50) DEFAULT NULL,
-  `notes` text DEFAULT NULL,
-  `created_by` int(11) DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Constraints for table `business_travel`
---
-ALTER TABLE `business_travel`
-  ADD CONSTRAINT `business_travel_ibfk_1` FOREIGN KEY (`staff_id`) REFERENCES `staff` (`id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `business_travel_ibfk_2` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL;
-
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
-
--- --------------------------------------------------------
---
--- Table structure for table `password_resets`
---
-
-CREATE TABLE `password_resets` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `user_id` int(11) NOT NULL,
-  `otp_code` varchar(6) NOT NULL,
-  `expires_at` datetime NOT NULL,
-  `used` tinyint(1) DEFAULT 0,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  PRIMARY KEY (`id`),
-  KEY `user_id` (`user_id`),
-  CONSTRAINT `password_resets_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
